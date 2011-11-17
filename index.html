@@ -1,0 +1,131 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Earthquakes!</title>
+<script type="text/javascript" src="lib/d3.min.js"></script>
+<script type="text/javascript" src="lib/d3.csv.min.js"></script>
+<script type="text/javascript" src="lib/d3.geo.min.js"></script>
+<script type="text/javascript" src="lib/jquery.js"></script>
+<script type="text/javascript" src="lib/jquery-ui.js"></script>
+<link type="text/css" rel="stylesheet" href="lib/jquery-ui.css" />
+<script type="text/javascript">
+$(function() {
+var xy = d3.geo.azimuthal().scale(240).mode("equidistant"),
+    circle = d3.geo.greatCircle(),
+    path = d3.geo.path().projection(xy),
+    svg = d3.select("#map").append("svg:svg");
+
+//Import world
+d3.json("data/world-countries.json", function(collection) {
+  svg.selectAll("path")
+      .data(collection.features)
+    .enter().append("svg:path")
+      .attr("d", function(d) { return path(circle.clip(d)); })
+    .append("svg:title")
+      .text(function(d) { return d.properties.name; });
+});
+
+
+// Import earthquakes
+d3.csv("data/earthquakes.csv", function(data) {
+  svg.selectAll("circle")
+     .data(data)
+     .enter()
+     .append("svg:circle")
+     .attr("cx", function(d) {return d.Lon;})  //this isn't right
+      .attr("cy", function(d) {return d.Lat;})
+     .attr("r", function(d) {return d.Magnitude;})
+     .attr("fill", "#335544");
+});
+
+// Helper functions
+function refresh(duration) {
+  var p = svg.selectAll("path");
+  if (duration) p = p.transition().duration(duration);
+  p.attr("d", function(d) { return path(circle.clip(d)); });
+  d3.select("#lon span")
+      .text(xy.origin()[0]);
+  d3.select("#lat span")
+      .text(xy.origin()[1]);
+  d3.select("#scale span")
+      .text(xy.scale());
+  d3.select("#translate-x span")
+      .text(xy.translate()[0]);
+  d3.select("#translate-y span")
+      .text(xy.translate()[1]);
+}
+
+// Events
+$("#lon").slider({
+  min: -180,
+  max: 180,
+  step: 1e-1,
+  value: 0,
+  slide: function(event, ui) {
+    var origin = xy.origin();
+    origin[0] = ui.value;
+    xy.origin(origin);
+    circle.origin(origin);
+    refresh();
+  }
+});
+
+$("#lat").slider({
+  min: -90,
+  max: 90,
+  step: 1e-1,
+  value: 0,
+  slide: function(event, ui) {
+    var origin = xy.origin();
+    origin[1] = ui.value;
+    xy.origin(origin);
+    circle.origin(origin);
+    refresh();
+  }
+});
+$("#scale").slider({
+  min: 0,
+  max: 3000,
+  value: 240,
+  slide: function(event, ui) {
+    xy.scale(ui.value);
+    refresh();
+  }
+});
+
+$("#translate-x").slider({
+  min: -2000,
+  max: 2000,
+  value: 480,
+  slide: function(event, ui) {
+    var translate = xy.translate();
+    translate[0] = ui.value;
+    xy.translate(translate);
+    refresh();
+  }
+});
+
+$("#translate-y").slider({
+  min: -2000,
+  max: 2000,
+  value: 250,
+  slide: function(event, ui) {
+    var translate = xy.translate();
+    translate[1] = ui.value;
+    xy.translate(translate);
+    refresh();
+  }
+});
+});
+
+</script>
+</head>
+<body>
+<div id="map"></div>
+<div id="lon">origin.longitude: <span>0</span></div>
+<div id="lat">origin.latitude: <span>0</span></div><p>
+<div id="scale">scale: <span>240</span></div><p>
+<div id="translate-x">translate.x: <span>480</span></div>
+<div id="translate-y">translate.y: <span>250</span></div>
+</body>
+</html>
