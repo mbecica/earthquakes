@@ -2,8 +2,7 @@
 <html>
 <head>
 <title>Earthquakes!</title>
-<script type="text/javascript" src="lib/d3.min.js"></script>
-<script type="text/javascript" src="lib/d3.csv.min.js"></script>
+<script type="text/javascript" src="lib/d3.js"></script>
 <script type="text/javascript" src="lib/d3.geo.min.js"></script>
 <script type="text/javascript" src="lib/jquery.js"></script>
 <script type="text/javascript" src="lib/jquery-ui.js"></script>
@@ -19,22 +18,18 @@ var xy = d3.geo.azimuthal().scale(240).mode("equidistant"),
 d3.json("data/world-countries.json", function(collection) {
   svg.selectAll("path")
       .data(collection.features)
-    .enter().append("svg:path")
-      .attr("d", function(d) { return path(circle.clip(d)); })
-    .append("svg:title")
+      .enter().append("svg:path")
+      .attr("d", function(d) {return path(circle.clip(d)); })
+      .append("svg:title")
       .text(function(d) { return d.properties.name; });
 });
 
-
 // Import earthquakes
-d3.csv("data/earthquakes.csv", function(data) {
-  svg.selectAll("circle")
-     .data(data)
-     .enter()
-     .append("svg:circle")
-     .attr("cx", function(d) {return d.Lon;})  //this isn't right
-      .attr("cy", function(d) {return d.Lat;})
-     .attr("r", function(d) {return d.Magnitude;})
+d3.json("data/earthquakes.json", function(r) {
+  svg.selectAll("path")
+     .data(r.features)
+     .enter().append("path")
+     .attr("d", function(d) {console.log(d.geometry.coordinates[0])})
      .attr("fill", "#335544");
 });
 

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8">
+        <title>Earthquakes with Polymaps</title>
+        <script type="text/javascript" src="../lib/jquery.js"></script>
+	<script type="text/javascript" src="../lib/underscore-min.js"></script>
+        <script type="text/javascript" src="../lib/polymaps.js"></script>
+    <style>
+    body {
+      font-family:"Ariel", "Helvetica", sans-serif;
+      margin:0;
+    }
+    .earthquake {
+      stroke-width:1;
+      fill-opacity: .5;
+      fill:#ef8d31;
+    }
+    .earthquake:hover {
+      fill-opacity:.7;
+      cursor:pointer;
+    }
+    .title {
+      padding:15px 0 0 20px;
+      position:absolute;
+    }
+    h1 {
+      color:#999;
+      margin:0;
+      padding-bottom:10px;
+    }
+    .title h4 {
+      display:none;
+      font-size:14px;
+      color:#888;
+      margin:0;
+      padding-bottom:3px;
+    }
+    .title label {
+      font-weight:bold;
+    }
+    .time {
+      position:absolute;
+      right:20px;
+      top:15px;
+    }
+    #slider {
+      margin:0;
+    }
+    </style>
+    </head>
+    <body>
+      <div class="title">
+        <h1></h1>
+        <h4 class="mag">Magnitude: <label></label></h4>
+        <h4 class="depth">Depth: <label></label></h4>
+      </div>
+      <div class="time">
+        <h2 id="time"></h2>
+        <input type="range" id="slider" step="36000"/>
+        </div>
+        <div id="map"></div>
+        <script type="text/javascript" src="../data/world.json"></script>
+        <script type="text/javascript" src="map.js"></script>
+    </body>
+</html>
