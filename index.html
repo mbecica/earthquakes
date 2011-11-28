@@ -5,79 +5,92 @@
 <script type="text/javascript" src="lib/d3.js"></script>
 <script type="text/javascript" src="lib/d3.geo.min.js"></script>
 <script type="text/javascript" src="lib/jquery.js"></script>
+<script type="text/javascript" src="lib/underscore-min.js"></script>
 <script type="text/javascript" src="lib/jquery-ui.js"></script>
 <link type="text/css" rel="stylesheet" href="lib/jquery-ui.css" />
 <script type="text/javascript">
 $(function() {
-var xy = d3.geo.azimuthal().scale(240).mode("equidistant"),
-    circle = d3.geo.greatCircle(),
+var xy = d3.geo.mercator(),
     path = d3.geo.path().projection(xy),
-    svg = d3.select("#map").append("svg:svg");
+    t = [];
+
+var countries = d3.select("#map").append("svg:svg").append("svg:g").attr("id", "countries"),
+    points = d3.select("svg").append("svg:g");
 
 //Import world
 d3.json("data/world-countries.json", function(collection) {
-  svg.selectAll("path")
-      .data(collection.features)
-      .enter().append("svg:path")
-      .attr("d", function(d) {return path(circle.clip(d)); })
-      .append("svg:title")
-      .text(function(d) { return d.properties.name; });
+  countries.selectAll("path")
+     .data(collection.features)
+     .enter().append("svg:path")
+     .attr("d", path)
+     .append("svg:title")
+     .text(function(d) { return d.properties.name; });
 });
 
 // Import earthquakes
 d3.json("data/earthquakes.json", function(r) {
-  svg.selectAll("path")
-     .data(r.features)
-     .enter().append("path")
-     .attr("d", function(d) {console.log(d.geometry.coordinates[0])})
-     .attr("fill", "#335544");
+    var dates = collectDates(r);
+    $('#time').slider({
+	step: 86400,
+	range: true,
+	min: _.min(dates),
+	max: _.max(dates),
+	values: [_.min(dates), _.max(dates)]
 });
+    t = $('#time').slider('values');
+    refreshTime();
+    points.selectAll("circle")
+        .data(r.features)
+        .enter().append("svg:circle")
+	.attr("r", function(d){return Math.pow(1.4, d.properties.magnitude)})
+	.attr("cx", function(d){return xy(d.geometry.coordinates)[0];})
+	.attr("cy", function(d){return xy(d.geometry.coordinates)[1];})
+	.attr("class", "show")
+	.on("mouseover", function(e) {
+	     $('h1').text(e.properties.region);
+	     $('h2').find('label').text(e.properties.magnitude);
+	     $('h3').text((new Date(e.properties.datetime)).toDateString());
+	})
+	.append("svg:title")
+	.text(function(d) {return d.properties.region});
+});
+
+// Data transform
+collectDates = function(data) {
+// collect the range of dates in unix time
+    var dates = [];
+    _.each(data.features, function(d, j) {
+	d.properties.datetime = Date.parse(d.properties.datetime);
+	dates.push(d.properties.datetime);
+    });
+    return dates;
+};
+
+getShowClass = function(data) {
+  var min = Math.round(t[0]/86400),
+      max = Math.round(t[1]/86400),
+      curT = Math.round(data.properties.datetime/86400);
+  return (min <= curT && curT <= max ? "show" : null);
+};
 
 // Helper functions
 function refresh(duration) {
-  var p = svg.selectAll("path");
-  if (duration) p = p.transition().duration(duration);
-  p.attr("d", function(d) { return path(circle.clip(d)); });
-  d3.select("#lon span")
-      .text(xy.origin()[0]);
-  d3.select("#lat span")
-      .text(xy.origin()[1]);
+  countries.selectAll("path").attr("d", path);
+  points.selectAll("circle")
+	.attr("cx", function(d){return xy(d.geometry.coordinates)[0];})
+	.attr("cy", function(d){return xy(d.geometry.coordinates)[1];});
   d3.select("#scale span")
       .text(xy.scale());
-  d3.select("#translate-x span")
-      .text(xy.translate()[0]);
-  d3.select("#translate-y span")
-      .text(xy.translate()[1]);
-}
+};
+
+function refreshTime() {
+    points.selectAll("circle")
+	.attr("class", function(d){return getShowClass(d)});
+    $('#timeLabel').find('.min').text((new Date(t[0])).toDateString());
+    $('#timeLabel').find('.max').text((new Date(t[1])).toDateString());
+};
 
 // Events
-$("#lon").slider({
-  min: -180,
-  max: 180,
-  step: 1e-1,
-  value: 0,
-  slide: function(event, ui) {
-    var origin = xy.origin();
-    origin[0] = ui.value;
-    xy.origin(origin);
-    circle.origin(origin);
-    refresh();
-  }
-});
-
-$("#lat").slider({
-  min: -90,
-  max: 90,
-  step: 1e-1,
-  value: 0,
-  slide: function(event, ui) {
-    var origin = xy.origin();
-    origin[1] = ui.value;
-    xy.origin(origin);
-    circle.origin(origin);
-    refresh();
-  }
-});
 $("#scale").slider({
   min: 0,
   max: 3000,
@@ -88,39 +101,81 @@ $("#scale").slider({
   }
 });
 
-$("#translate-x").slider({
-  min: -2000,
-  max: 2000,
-  value: 480,
-  slide: function(event, ui) {
-    var translate = xy.translate();
-    translate[0] = ui.value;
-    xy.translate(translate);
-    refresh();
-  }
+$('#time').bind("slide", function(event, ui) {
+      t = $('#time').slider('values');
+      refreshTime();  
+  });
 });
-
-$("#translate-y").slider({
-  min: -2000,
-  max: 2000,
-  value: 250,
-  slide: function(event, ui) {
-    var translate = xy.translate();
-    translate[1] = ui.value;
-    xy.translate(translate);
-    refresh();
-  }
-});
-});
-
 </script>
+<style>
+body {
+font-family:Ariel, Helvetica, sans-serif;
+}
+h1, h2, h3 {
+margin:0;
+padding:0px;
+color:#333;
+font-weight:normal;
+}
+h1 {
+text-transform:uppercase;
+font-size:16px;
+}
+h2, h3 {font-size:14px;}
+path {
+fill:#bbb;
+}
+circle {
+fill:#994483;
+opacity:.6;
+display:none;
+}
+circle.show {
+display:block;
+}
+circle:hover {
+cursor:pointer;
+opacity:.8;
+}
+#timeLabel .max {
+float:right;
+}
+#titles {
+position:absolute;
+top:10px;
+width:960px;
+}
+#sliders {
+position:absolute;
+bottom:0;
+height:100px;
+width:960px;
+}
+#sliders .ui-slider {
+margin-bottom:5px;
+}
+.wrapper {
+width:960px;
+margin:0 auto;
+}
+</style>
 </head>
 <body>
-<div id="map"></div>
-<div id="lon">origin.longitude: <span>0</span></div>
-<div id="lat">origin.latitude: <span>0</span></div><p>
-<div id="scale">scale: <span>240</span></div><p>
-<div id="translate-x">translate.x: <span>480</span></div>
-<div id="translate-y">translate.y: <span>250</span></div>
+<div class="wrapper">
+    <div id="titles">
+	<h1></h1>
+	<h2>Magnitude: <label></label></h2>
+	<h3></h3>
+    </div>
+    <div id="map"></div>
+    <div id="sliders">
+	<div id="scale">scale: <span>240</span></div><p>
+	<div id="timeLabel">
+		<label class="min"></label>
+		<label class="max"></label>
+	</div>
+	<div id="time">time: <span>0</span></div><p>
+    </div>
+</div>
 </body>
 </html>
